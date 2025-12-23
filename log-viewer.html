@@ -67,9 +67,14 @@
                     <table class="w-full text-left"><tbody id="table-4-1"></tbody></table>
                 </div>
                 <div class="report-card">
-                    <h3 class="font-black text-indigo-600 mb-4 border-b pb-2">表 4-2：平均停留時間 (秒)</h3>
-                    <div class="flex justify-around items-center h-24">
-                        <div class="text-center"><p class="text-xs text-slate-400 font-bold">總平均</p><div id="avg-time" class="stat-val">0</div></div>
+                    <h3 class="font-black text-indigo-600 mb-4 border-b pb-2">表 4-2：各區域停留時間分析</h3>
+                    <div class="mb-4 text-center">
+                        <p class="text-xs text-slate-400 font-bold">全館總平均停留</p>
+                        <div id="avg-time" class="stat-val">0s</div>
+                    </div>
+                    <div class="overflow-y-auto max-h-60">
+                        <table id="table-4-2-detail" class="w-full text-left">
+                            </table>
                     </div>
                 </div>
             </div>
@@ -163,6 +168,9 @@
 
         function renderReports(data) {
             const uniqueIds = [...new Set(data.map(d => d.id))];
+        }
+        function renderReports(data) {
+            const uniqueIds = [...new Set(data.map(d => d.id))];
             
             // 4-1 成員組合 (去重)
             const gCounts = {};
@@ -174,13 +182,74 @@
                 `<tr><td class="table-cell font-bold">${k}</td><td class="table-cell text-right">${v} 組</td></tr>`).join('');
 
             // 4-2 停留時間 (簡化計算：每個個案最後點位 - 最初點位)
+            const locationDurations = {}; // 用於儲存各點位的總停留時間與次數
+
+            uniqueIds.forEach(id => {
+                // 1. 取得該個案的所有點位並按時間排序
+                const userPoints = data
+                    .filter(d => d.id === id)
+                    .sort((a, b) => new Date(a.time) - new Date(b.time));
+
+                // 2. 計算連續點位間的時間差
+                for (let i = 0; i < userPoints.length - 1; i++) {
+                    const currentPoint = userPoints[i];
+                    const nextPoint = userPoints[i + 1];
+        
+                    const startTime = new Date(currentPoint.time);
+                    const endTime = new Date(nextPoint.time);
+                    const duration = (endTime - startTime) / 1000; // 轉換為秒
+
+                    const locName = currentPoint.locName || "未命名位置";
+
+                    // 3. 累積到該位置的統計資料中
+                    if (!locationDurations[locName]) {
+                        locationDurations[locName] = { totalSec: 0, count: 0 };
+                    }
+                    locationDurations[locName].totalSec += duration;
+                    locationDurations[locName].count += 1;
+                }
+            });
+
+            // 4. 渲染到表 4-2 的 HTML 中
+            let html42 = `
+                <thead>
+                    <tr class="bg-slate-50">
+                        <th class="table-header">觀測位置</th>
+                        <th class="table-header text-right">平均停留 (秒)</th>
+                        <th class="table-header text-right">樣本數</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            let grandTotalSec = 0;
+            let grandTotalCount = 0;
+
+            Object.entries(locationDurations).forEach(([loc, stat]) => {
+                const avg = Math.round(stat.totalSec / stat.count);
+                grandTotalSec += stat.totalSec;
+                grandTotalCount += stat.count;
+                html42 += `
+                    <tr>
+                        <td class="table-cell font-bold">${loc}</td>
+                        <td class="table-cell text-right text-indigo-600 font-mono">${avg}s</td>
+                        <td class="table-cell text-right text-slate-400">${stat.count} 次</td>
+                    </tr>`;
+            });
+
+            // 計算總平均並顯示
+            const finalAvg = grandTotalCount ? Math.round(grandTotalSec / grandTotalCount) : 0;
+            document.getElementById('avg-time').innerText = finalAvg + "s";
+
+            // 如果你有一個對應的 table 容器
+            document.getElementById('table-4-2-detail').innerHTML = html42 + `</tbody>`;
+/*
             let totalSecs = 0;
             uniqueIds.forEach(id => {
                 const times = data.filter(d => d.id === id).map(d => new Date(d.time));
                 if (times.length > 1) totalSecs += (Math.max(...times) - Math.min(...times)) / 1000;
             });
             document.getElementById('avg-time').innerText = uniqueIds.length ? Math.round(totalSecs / uniqueIds.length) : 0;
-
+*/
             // 4-6 行為統計
             const aCounts = {};
             data.forEach(d => aCounts[d.action] = (aCounts[d.action] || 0) + 1);
