@@ -106,181 +106,153 @@
     <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-database-compat.js"></script>
 
-<script>
-    // 同上的 firebaseConfig...
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // 修改讀取邏輯
-    function filterData(period) {
-        document.getElementById('filter-status').innerText = "從雲端獲取最新數據中...";
-        
-        // 監聽雲端資料庫
-        db.ref('research_data').once('value', (snapshot) => {
-            const rawObject = snapshot.val() || {};
-            // Firebase push 產生的是物件，轉換成陣列以利分析
-            const rawData = Object.values(rawObject);
-            
-            const now = new Date();
-            let filtered = rawData;
-            
-            // ... (原本的日期篩選 filter 邏輯維持不變) ...
-            if (period !== 'all') {
-                filtered = rawData.filter(d => {
-                    const entryDate = new Date(d.time);
-                    if (period === 'day') return entryDate.toDateString() === now.toDateString();
-                    if (period === 'week') return (now - entryDate) <= 7*24*60*60*1000;
-                    if (period === 'month') return (now - entryDate) <= 30*24*60*60*1000;
-                    if (period === 'year') return entryDate.getFullYear() === now.getFullYear();
-                    return true;
-                });
-            }
-
-            currentFilteredData = filtered;
-            renderReports(filtered);
-            document.getElementById('filter-status').innerText = `雲端連線正常：共 ${filtered.length} 筆資料`;
-        });
-    }
-</script>
-
     <script>
-        const KEY = 'NMMBA_RESEARCH_FINAL';
-        let currentFilteredData = [];
+// --- 1. Firebase 配置與初始化 ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDeITI5O-sQ7opy_670e5bMtxP9os16QNs",
+    authDomain: "marine-biology-78685.firebaseapp.com",
+    databaseURL: "https://marine-biology-78685-default-rtdb.firebaseio.com",
+    projectId: "marine-biology-78685",
+    storageBucket: "marine-biology-78685.appspot.com",
+    messagingSenderId: "287865863826",
+    appId: "1:287865863826:web:f622ce81c78613e285f04b"
+};
 
-        function filterData(period) {
-            const rawData = JSON.parse(localStorage.getItem(KEY) || '[]');
-            const now = new Date();
-            let filtered = rawData;
-            if (period !== 'all') {
-                filtered = rawData.filter(d => {
-                    const entryDate = new Date(d.time);
-                    if (period === 'day') return entryDate.toDateString() === now.toDateString();
-                    if (period === 'week') return (now - entryDate) <= 7*24*60*60*1000;
-                    if (period === 'month') return (now - entryDate) <= 30*24*60*60*1000;
-                    if (period === 'year') return entryDate.getFullYear() === now.getFullYear();
-                    return true;
-                });
-            }
-            currentFilteredData = filtered;
-            document.getElementById('filter-status').innerText = `目前顯示筆數：${filtered.length}`;
-            renderReports(filtered);
-        }
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+let currentFilteredData = []; // 用於存儲篩選後的結果供導出使用
 
-        function renderReports(data) {
-            const uniqueIds = [...new Set(data.map(d => d.id))];
-        }
-        function renderReports(data) {
-            const uniqueIds = [...new Set(data.map(d => d.id))];
-            
-            // 4-1 成員組合 (去重)
-            const gCounts = {};
-            uniqueIds.forEach(id => {
-                const g = data.find(d => d.id === id).group;
-                gCounts[g] = (gCounts[g] || 0) + 1;
-            });
-            document.getElementById('table-4-1').innerHTML = Object.entries(gCounts).map(([k, v]) => 
-                `<tr><td class="table-cell font-bold">${k}</td><td class="table-cell text-right">${v} 組</td></tr>`).join('');
-
-            // 4-2 停留時間 (簡化計算：每個個案最後點位 - 最初點位)
-            const locationDurations = {}; // 用於儲存各點位的總停留時間與次數
-
-            uniqueIds.forEach(id => {
-                // 1. 取得該個案的所有點位並按時間排序
-                const userPoints = data
-                    .filter(d => d.id === id)
-                    .sort((a, b) => new Date(a.time) - new Date(b.time));
-
-                // 2. 計算連續點位間的時間差
-                for (let i = 0; i < userPoints.length - 1; i++) {
-                    const currentPoint = userPoints[i];
-                    const nextPoint = userPoints[i + 1];
+// --- 2. 核心數據處理函數 ---
+function filterData(period) {
+    const statusEl = document.getElementById('filter-status');
+    statusEl.innerText = "🔍 正在從雲端抓取最新數據...";
+    
+    // 從 Firebase 獲取資料
+    db.ref('research_data').once('value').then((snapshot) => {
+        const rawObject = snapshot.val() || {};
+        const rawData = Object.values(rawObject);
         
-                    const startTime = new Date(currentPoint.time);
-                    const endTime = new Date(nextPoint.time);
-                    const duration = (endTime - startTime) / 1000; // 轉換為秒
-
-                    const locName = currentPoint.locName || "未命名位置";
-
-                    // 3. 累積到該位置的統計資料中
-                    if (!locationDurations[locName]) {
-                        locationDurations[locName] = { totalSec: 0, count: 0 };
-                    }
-                    locationDurations[locName].totalSec += duration;
-                    locationDurations[locName].count += 1;
-                }
-            });
-
-            // 4. 渲染到表 4-2 的 HTML 中
-            let html42 = `
-                <thead>
-                    <tr class="bg-slate-50">
-                        <th class="table-header">觀測位置</th>
-                        <th class="table-header text-right">平均停留 (秒)</th>
-                        <th class="table-header text-right">樣本數</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-            let grandTotalSec = 0;
-            let grandTotalCount = 0;
-
-            Object.entries(locationDurations).forEach(([loc, stat]) => {
-                const avg = Math.round(stat.totalSec / stat.count);
-                grandTotalSec += stat.totalSec;
-                grandTotalCount += stat.count;
-                html42 += `
-                    <tr>
-                        <td class="table-cell font-bold">${loc}</td>
-                        <td class="table-cell text-right text-indigo-600 font-mono">${avg}s</td>
-                        <td class="table-cell text-right text-slate-400">${stat.count} 次</td>
-                    </tr>`;
-            });
-
-            // 計算總平均並顯示
-            const finalAvg = grandTotalCount ? Math.round(grandTotalSec / grandTotalCount) : 0;
-            document.getElementById('avg-time').innerText = finalAvg + "s";
-
-            // 如果你有一個對應的 table 容器
-            document.getElementById('table-4-2-detail').innerHTML = html42 + `</tbody>`;
-/*
-            let totalSecs = 0;
-            uniqueIds.forEach(id => {
-                const times = data.filter(d => d.id === id).map(d => new Date(d.time));
-                if (times.length > 1) totalSecs += (Math.max(...times) - Math.min(...times)) / 1000;
-            });
-            document.getElementById('avg-time').innerText = uniqueIds.length ? Math.round(totalSecs / uniqueIds.length) : 0;
-*/
-            // 4-6 行為統計
-            const aCounts = {};
-            data.forEach(d => aCounts[d.action] = (aCounts[d.action] || 0) + 1);
-            document.getElementById('table-4-6').innerHTML = Object.entries(aCounts).map(([k, v]) => 
-                `<tr><td class="table-cell">${k}</td><td class="table-cell text-right font-mono">${v} 次</td></tr>`).join('');
-
-            // 4-7 動線分析 (定義：點位數 > 3 為迴路)
-            let linear = 0, loop = 0;
-            uniqueIds.forEach(id => { if (data.filter(d => d.id === id).length > 3) loop++; else linear++; });
-            document.getElementById('path-linear').innerText = linear;
-            document.getElementById('path-loop').innerText = loop;
-
-            // 流水帳預覽 (取前10筆)
-            document.getElementById('raw-data-preview').innerHTML = data.slice(0, 10).map(d => 
-                `<tr class="border-b"><td class="p-2">${d.id}</td><td class="p-2">${d.group}</td><td class="p-2">${d.action}</td><td class="p-2">${d.locName || '-'}</td><td class="p-2 text-[10px]">${new Date(d.time).toLocaleTimeString()}</td></tr>`).join('');
+        if (rawData.length === 0) {
+            statusEl.innerText = "⚠️ 目前資料庫內無任何數據。";
+            return;
         }
 
-        function exportToExcel() {
-            if (!currentFilteredData.length) return alert("無數據");
-            let csv = "\ufeff個案編號,成員組合,行為項目,位置名稱,所在館區,座標X,座標Y,時間\n";
-            currentFilteredData.forEach(d => {
-                csv += `${d.id},${d.group},${d.action},${d.locName || ""},${d.map},${d.x},${d.y},${d.time}\n`;
+        const now = new Date();
+        let filtered = rawData;
+        
+        // 執行日期篩選
+        if (period !== 'all') {
+            filtered = rawData.filter(d => {
+                const entryDate = new Date(d.time);
+                if (period === 'day') return entryDate.toDateString() === now.toDateString();
+                if (period === 'week') return (now - entryDate) <= 7*24*60*60*1000;
+                if (period === 'month') return (now - entryDate) <= 30*24*60*60*1000;
+                if (period === 'year') return entryDate.getFullYear() === now.getFullYear();
+                return true;
             });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `海生館研究完整數據_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
         }
 
-        window.onload = () => filterData('all');
+        // 按時間先後排序 (對計算停留時間至關重要)
+        filtered.sort((a, b) => new Date(a.time) - new Date(b.time));
+        
+        currentFilteredData = filtered;
+        statusEl.innerText = `✅ 同步成功！顯示筆數：${filtered.length} (篩選範圍: ${period})`;
+        renderReports(filtered);
+    }).catch(err => {
+        console.error(err);
+        statusEl.innerText = "❌ 雲端讀取失敗，請檢查網路。";
+    });
+}
+
+// --- 3. 報表渲染邏輯 ---
+function renderReports(data) {
+    if (!data || data.length === 0) return;
+
+    const uniqueIds = [...new Set(data.map(d => d.id))];
+    
+    // 表 4-1：成員組合統計
+    const gCounts = {};
+    uniqueIds.forEach(id => {
+        const found = data.find(d => d.id === id);
+        if (found) gCounts[found.group] = (gCounts[found.group] || 0) + 1;
+    });
+    document.getElementById('table-4-1').innerHTML = Object.entries(gCounts)
+        .map(([k, v]) => `<tr><td class="table-cell font-bold">${k}</td><td class="table-cell text-right">${v} 組</td></tr>`)
+        .join('');
+
+    // 表 4-2：各區域平均停留時間 (點對點計算)
+    const locationDurations = {};
+    let totalStaySec = 0;
+    let stayCount = 0;
+
+    uniqueIds.forEach(id => {
+        const userPoints = data.filter(d => d.id === id); // 已在 filterData 排序過
+        for (let i = 0; i < userPoints.length - 1; i++) {
+            const duration = (new Date(userPoints[i+1].time) - new Date(userPoints[i].time)) / 1000;
+            const loc = userPoints[i].locName || "未命名位置";
+
+            if (!locationDurations[loc]) locationDurations[loc] = { totalSec: 0, count: 0 };
+            locationDurations[loc].totalSec += duration;
+            locationDurations[loc].count += 1;
+            
+            totalStaySec += duration;
+            stayCount += 1;
+        }
+    });
+
+    // 渲染 4-2 表格明細
+    let html42 = `<thead><tr class="bg-slate-50"><th class="table-header">觀測位置</th><th class="table-header text-right">平均停留</th><th class="table-header text-right">樣本</th></tr></thead><tbody>`;
+    Object.entries(locationDurations).forEach(([loc, stat]) => {
+        const avg = Math.round(stat.totalSec / stat.count);
+        html42 += `<tr><td class="table-cell font-bold">${loc}</td><td class="table-cell text-right text-indigo-600 font-mono">${avg}s</td><td class="table-cell text-right text-slate-400 text-[10px]">${stat.count} 次</td></tr>`;
+    });
+    document.getElementById('table-4-2-detail').innerHTML = html42 + `</tbody>`;
+    document.getElementById('avg-time').innerText = stayCount ? Math.round(totalStaySec / uniqueIds.length) + "s" : "0s";
+
+    // 表 4-6：行為統計
+    const aCounts = {};
+    data.forEach(d => aCounts[d.action] = (aCounts[d.action] || 0) + 1);
+    document.getElementById('table-4-6').innerHTML = Object.entries(aCounts)
+        .map(([k, v]) => `<tr><td class="table-cell">${k}</td><td class="table-cell text-right font-mono">${v} 次</td></tr>`)
+        .join('');
+
+    // 表 4-7：動線模式 (優化定義：點位 > 3 且回到初始點附近為迴路，此處簡化為點位數判斷)
+    let linear = 0, loop = 0;
+    uniqueIds.forEach(id => {
+        if (data.filter(d => d.id === id).length >= 4) loop++; 
+        else linear++;
+    });
+    document.getElementById('path-linear').innerText = linear;
+    document.getElementById('path-loop').innerText = loop;
+
+    // 原始紀錄流水帳預覽 (前 15 筆)
+    document.getElementById('raw-data-preview').innerHTML = data.slice(0, 15).map(d => 
+        `<tr class="border-b text-slate-500"><td class="p-2">${d.id}</td><td class="p-2">${d.group}</td><td class="p-2">${d.action}</td><td class="p-2">${d.locName || '-'}</td><td class="p-2 text-[10px]">${new Date(d.time).toLocaleString()}</td></tr>`
+    ).join('');
+}
+
+// --- 4. 匯出 CSV 功能 ---
+function exportToExcel() {
+    if (!currentFilteredData.length) return alert("目前篩選範圍內沒有資料可以匯出");
+    
+    // 加入 BOM \ufeff 解決 Excel 中文亂碼問題
+    let csv = "\ufeff個案編號,成員組合,行為項目,位置名稱,所在館區,座標X,座標Y,紀錄時間\n";
+    currentFilteredData.forEach(d => {
+        const timeStr = new Date(d.time).toLocaleString().replace(/,/g, ""); // 移除逗點避免破壞 CSV 格式
+        csv += `${d.id},${d.group},${d.action},${d.locName || "N/A"},${d.map},${d.x},${d.y},${timeStr}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const fileName = `NMMBA_Research_${new Date().toISOString().slice(0,10)}.csv`;
+    
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+}
+
+// 初始載入
+window.onload = () => filterData('all');
     </script>
 </body>
 </html>

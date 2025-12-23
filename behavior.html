@@ -121,7 +121,7 @@
     // 初始化 Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
+/*
     // 2. 修改 save 函數
     function save() {
         const sid = document.getElementById('sid').value;
@@ -153,6 +153,7 @@
           })
           .catch(err => alert("同步失敗: " + err));
     }
+*/    
 </script>
 
     <script>
@@ -220,6 +221,67 @@
             const action = document.getElementById('action-select').value;
             const locName = document.getElementById('location-name').value;
 
+            // 基礎欄位驗證
+            if(!group || !action) { 
+                alert("請填妥成員組合與行為項目！"); 
+                return; 
+            }
+
+            // 建立資料物件
+            const point = { 
+                id: sid, 
+                group: group, 
+                action: action,
+                locName: locName,
+                seq: path.length + 1,
+                map: document.getElementById('map-select').options[document.getElementById('map-select').selectedIndex].text,
+                x: tempCoord.x, 
+                y: tempCoord.y,
+                time: new Date().toISOString(),
+                timestamp: firebase.database.ServerValue.TIMESTAMP // Firebase 伺服器時間
+            };
+
+            // --- 步驟 A: 儲存至 Firebase ---
+            document.getElementById('status-bar').innerText = "同步中...";
+    
+            // push() 會自動生成一個不重複的 ID (如 -Nx123...)
+            db.ref('research_data').push(point)
+                .then(() => {
+                    // --- 步驟 B: Firebase 成功後，更新本地狀態與畫布 ---
+            
+                    // 同步更新 10px 同一座標點的名稱 (優化體驗)
+                    path.forEach(p => { 
+                        if (p.x === tempCoord.x && p.y === tempCoord.y) p.locName = locName; 
+                    });
+
+                    path.push(point);
+            
+                    // 同步存入 LocalStorage (用於目前的 log-viewer 邏輯)
+                    const all = JSON.parse(localStorage.getItem(KEY) || '[]');
+                    all.unshift(point);
+                    localStorage.setItem(KEY, JSON.stringify(all));
+
+                    // 重置 UI 狀態
+                    tempCoord = null;
+                    document.getElementById('save-btn').disabled = true;
+                    document.getElementById('location-name-box').classList.add('hidden');
+                    document.getElementById('status-bar').innerText = `✅ 同步成功 (${sid} 第 ${point.seq} 點)`;
+            
+                    render(); // 重新繪製地圖標註
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("雲端同步失敗，請檢查網路連線！");
+                    document.getElementById('status-bar').innerText = "❌ 同步失敗";
+                });
+        }
+/*
+        function save() {
+            const sid = document.getElementById('sid').value;
+            const group = document.getElementById('group-type').value;
+            const action = document.getElementById('action-select').value;
+            const locName = document.getElementById('location-name').value;
+
             if(!group || !action) { alert("請填妥成員組合與行為！"); return; }
 
             const point = { 
@@ -245,7 +307,7 @@
             document.getElementById('status-bar').innerText = `點位儲存成功 (${sid})`;
             render();
         }
-
+*/
         // 下列輔助功能維持原樣
         function render() {
             container.querySelectorAll('.marker, .path-line, .marker-label').forEach(el => el.remove());
