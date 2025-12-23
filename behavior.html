@@ -42,7 +42,6 @@
                         <label class="text-[10px] font-bold text-slate-400">成員組合</label>
                         <select id="group-type" onchange="handleDynamicSelect(this, 'CUSTOM_GROUPS')" class="w-full p-2 border rounded-lg text-sm bg-amber-50 focus:ring-2 focus:ring-amber-200 outline-none">
                             <option value="">-- 選擇成員組合 --</option>
-                            <optgroup label="自定義" id="custom-group-list"></optgroup>
                             <option value="ADD_NEW" class="text-indigo-600 font-bold">+ 新增成員組合...</option>
                         </select>
                     </div>
@@ -62,21 +61,16 @@
                         <option value="map4">世界水域館 3F</option>
                     </select>
 
-                    <div id="location-name-box" class="p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <div id="location-name-box" class="p-3 bg-indigo-50 rounded-xl border border-indigo-100 hidden">
                         <label class="block text-[10px] font-bold text-indigo-400 mb-1 italic">📍 偵測到點位：可修改位置名稱</label>
                         <input type="text" id="location-name" placeholder="位置名稱 (例：大洋池)" class="w-full p-2 border border-indigo-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>    
                 </div>
 
-                <div class="space-y-1">
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
                     <label class="text-[10px] font-bold text-slate-400">3. 觀眾行為</label>
                     <select id="action-select" onchange="handleDynamicSelect(this, 'CUSTOM_ACTIONS')" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                         <option value="">-- 選擇行為類型 --</option>
-                        <option value="共同參與">共同參與</option>
-                        <option value="引導說明">引導說明</option>
-                        <option value="拍照錄影">拍照錄影</option>
-                        <option value="休息等待">休息等待</option>
-                        <optgroup label="自定義" id="custom-action-list"></optgroup>
                         <option value="ADD_NEW" class="text-indigo-600 font-bold">+ 新增行為項目...</option>
                     </select>
 
@@ -85,6 +79,9 @@
                             📌 儲存此紀錄點
                         </button>
                     </div>
+                </div>
+
+                <div class="space-y-1">
                 </div>                
             </div>
             
