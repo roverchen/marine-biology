@@ -30,18 +30,8 @@
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div class="md:col-span-4 space-y-4">
                 
-                <div class="bg-white p-4 rounded-xl shadow-sm border">
-                    <label class="block text-xs font-black text-indigo-600 mb-2 uppercase">1. 選擇館區</label>
-                    <select id="map-select" onchange="changeMap(this.value)" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm font-bold focus:ring-2 focus:ring-indigo-500">
-                        <option value="map1">臺灣水域館</option>
-                        <option value="map2">珊瑚王國館</option>
-                        <option value="map3">世界水域館 1,2F</option>
-                        <option value="map4">世界水域館 3F</option>
-                    </select>
-                </div>
-
                 <div class="bg-white p-4 rounded-xl shadow-sm border space-y-4">
-                    <label class="block text-xs font-black text-slate-500 uppercase">2. 觀察對象資訊</label>
+                    <label class="block text-xs font-black text-slate-500 uppercase">1. 觀察對象資訊</label>
                     
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-slate-400">個案編號</label>
@@ -65,31 +55,42 @@
                         <span>⏭️ 完成本組 / 下一組個案</span>
                         <span class="text-[10px] font-normal opacity-60">(自動跳號並清除畫布)</span>
                     </button>
-
-                    <div id="location-name-box" class="p-3 bg-indigo-50 rounded-xl border border-indigo-100 hidden">
-                        <label class="block text-[10px] font-bold text-indigo-400 mb-1 italic">📍 偵測到點位：可修改位置名稱</label>
-                        <input type="text" id="location-name" placeholder="位置名稱 (例：大洋池)" class="w-full p-2 border border-indigo-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400">觀眾行為</label>
-                        <select id="action-select" onchange="handleDynamicSelect(this, 'CUSTOM_ACTIONS')" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <option value="">-- 選擇行為類型 --</option>
-                            <option value="共同參與">共同參與</option>
-                            <option value="引導說明">引導說明</option>
-                            <option value="拍照錄影">拍照錄影</option>
-                            <option value="休息等待">休息等待</option>
-                            <optgroup label="自定義" id="custom-action-list"></optgroup>
-                            <option value="ADD_NEW" class="text-indigo-600 font-bold">+ 新增行為項目...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="bg-slate-50 p-4 rounded-xl border border-dashed text-center">
-                        <button id="save-btn" onclick="save()" disabled class="w-full bg-indigo-600 text-white py-4 rounded-xl font-black shadow-lg disabled:bg-slate-200 transition-all active:scale-95">
-                            📌 儲存此紀錄點
-                        </button>
-                    </div>
                 </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <label class="block text-xs font-black text-indigo-600 mb-2 uppercase">2. 選擇館區</label>
+                    <select id="map-select" onchange="changeMap(this.value)" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm font-bold focus:ring-2 focus:ring-indigo-500">
+                        <option value="map1">臺灣水域館</option>
+                        <option value="map2">珊瑚王國館</option>
+                        <option value="map3">世界水域館 1,2F</option>
+                        <option value="map4">世界水域館 3F</option>
+                    </select>
+                </div>
+
+                <div id="location-name-box" class="p-3 bg-indigo-50 rounded-xl border border-indigo-100 hidden">
+                    <label class="block text-[10px] font-bold text-indigo-400 mb-1 italic">📍 偵測到點位：可修改位置名稱</label>
+                    <input type="text" id="location-name" placeholder="位置名稱 (例：大洋池)" class="w-full p-2 border border-indigo-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400">觀眾行為</label>
+                    <select id="action-select" onchange="handleDynamicSelect(this, 'CUSTOM_ACTIONS')" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="">-- 選擇行為類型 --</option>
+                        <option value="共同參與">共同參與</option>
+                        <option value="引導說明">引導說明</option>
+                        <option value="拍照錄影">拍照錄影</option>
+                        <option value="休息等待">休息等待</option>
+                        <optgroup label="自定義" id="custom-action-list"></optgroup>
+                        <option value="ADD_NEW" class="text-indigo-600 font-bold">+ 新增行為項目...</option>
+                    </select>
+                </div>
+                
+                <div class="bg-slate-50 p-4 rounded-xl border border-dashed text-center">
+                    <button id="save-btn" onclick="save()" disabled class="w-full bg-indigo-600 text-white py-4 rounded-xl font-black shadow-lg disabled:bg-slate-200 transition-all active:scale-95">
+                        📌 儲存此紀錄點
+                    </button>
+                </div>
+
             </div>
             
             <div class="md:col-span-8 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 text-center">
@@ -121,193 +122,126 @@
     // 初始化 Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-/*
-    // 2. 修改 save 函數
+
+    const KEY = 'NMMBA_RESEARCH_FINAL';
+    let path = [];
+    let tempCoord = null;
+
+    window.onload = () => {
+        loadCustomOptions('CUSTOM_GROUPS', 'custom-group-list');
+        loadCustomOptions('CUSTOM_ACTIONS', 'custom-action-list');
+        refreshID();
+    };
+
+    // 功能：初始化或刷新編號，不主動清空畫布
+    function refreshID() {
+        const allData = JSON.parse(localStorage.getItem(KEY) || '[]');
+        const numbers = allData.map(d => {
+            const m = d.id.match(/A(\d+)/);
+            return m ? parseInt(m[1]) : 0;
+        });
+        document.getElementById('sid').value = "A" + (Math.max(0, ...numbers) + 1).toString().padStart(2, '0');
+    }
+
+    // 功能：結合按鈕 - 完成本組並跳號、清除畫布
+    function finishAndNext() {
+        if (path.length > 0 && !confirm("確定結束目前的觀察並開始新個案嗎？(將清空畫布線條)")) return;
+            
+        refreshID();
+        path = []; 
+        tempCoord = null;
+        render();
+        document.getElementById('location-name-box').classList.add('hidden');
+        document.getElementById('save-btn').disabled = true;
+        document.getElementById('status-bar').innerText = `已開啟新個案：${document.getElementById('sid').value}`;
+    }
+
+    const container = document.getElementById('map-container');
+    container.onclick = (e) => {
+        const rect = container.getBoundingClientRect();
+        let clickX = Math.round(e.clientX - rect.left);
+        let clickY = Math.round(e.clientY - rect.top);
+
+        // 10px 範圍偵測邏輯
+        const nearbyPoint = path.find(p => {
+            const dist = Math.sqrt(Math.pow(p.x - clickX, 2) + Math.pow(p.y - clickY, 2));
+            return dist <= 10;
+        });
+
+        if (nearbyPoint) {
+            tempCoord = { x: nearbyPoint.x, y: nearbyPoint.y, locName: nearbyPoint.locName || "" };
+            document.getElementById('location-name').value = nearbyPoint.locName || "";
+        } else {
+            tempCoord = { x: clickX, y: clickY, locName: "" };
+            document.getElementById('location-name').value = "";
+        }
+
+        document.getElementById('location-name-box').classList.remove('hidden');
+        document.getElementById('save-btn').disabled = false;
+        render();
+    };
+
     function save() {
         const sid = document.getElementById('sid').value;
         const group = document.getElementById('group-type').value;
         const action = document.getElementById('action-select').value;
         const locName = document.getElementById('location-name').value;
 
-        if(!group || !action) { alert("請填妥資料"); return; }
+        // 基礎欄位驗證
+        if(!group || !action) { 
+            alert("請填妥成員組合與行為項目！"); 
+            return; 
+        }
 
+        // 建立資料物件
         const point = { 
-            id: sid, group: group, action: action,
+            id: sid, 
+            group: group, 
+            action: action,
             locName: locName,
             seq: path.length + 1,
             map: document.getElementById('map-select').options[document.getElementById('map-select').selectedIndex].text,
-            x: tempCoord.x, y: tempCoord.y,
+            x: tempCoord.x, 
+            y: tempCoord.y,
             time: new Date().toISOString(),
-            device: navigator.userAgent.slice(0,20) // 記錄是哪台設備傳的
+            timestamp: firebase.database.ServerValue.TIMESTAMP // Firebase 伺服器時間
         };
 
-        // --- 改用 Firebase 儲存 ---
-        // push() 會產生唯一金鑰，並將資料即時同步至雲端
-        db.ref('research_data').push(point)
-          .then(() => {
-              path.push(point);
-              tempCoord = null;
-              document.getElementById('save-btn').disabled = true;
-              document.getElementById('status-bar').innerText = "雲端同步成功！";
-              render();
-          })
-          .catch(err => alert("同步失敗: " + err));
-    }
-*/    
-</script>
-
-    <script>
-        const KEY = 'NMMBA_RESEARCH_FINAL';
-        let path = [];
-        let tempCoord = null;
-
-        window.onload = () => {
-            loadCustomOptions('CUSTOM_GROUPS', 'custom-group-list');
-            loadCustomOptions('CUSTOM_ACTIONS', 'custom-action-list');
-            refreshID();
-        };
-
-        // 功能：初始化或刷新編號，不主動清空畫布
-        function refreshID() {
-            const allData = JSON.parse(localStorage.getItem(KEY) || '[]');
-            const numbers = allData.map(d => {
-                const m = d.id.match(/A(\d+)/);
-                return m ? parseInt(m[1]) : 0;
-            });
-            document.getElementById('sid').value = "A" + (Math.max(0, ...numbers) + 1).toString().padStart(2, '0');
-        }
-
-        // 功能：結合按鈕 - 完成本組並跳號、清除畫布
-        function finishAndNext() {
-            if (path.length > 0 && !confirm("確定結束目前的觀察並開始新個案嗎？(將清空畫布線條)")) return;
-            
-            refreshID();
-            path = []; 
-            tempCoord = null;
-            render();
-            document.getElementById('location-name-box').classList.add('hidden');
-            document.getElementById('save-btn').disabled = true;
-            document.getElementById('status-bar').innerText = `已開啟新個案：${document.getElementById('sid').value}`;
-        }
-
-        const container = document.getElementById('map-container');
-        container.onclick = (e) => {
-            const rect = container.getBoundingClientRect();
-            let clickX = Math.round(e.clientX - rect.left);
-            let clickY = Math.round(e.clientY - rect.top);
-
-            // 10px 範圍偵測邏輯
-            const nearbyPoint = path.find(p => {
-                const dist = Math.sqrt(Math.pow(p.x - clickX, 2) + Math.pow(p.y - clickY, 2));
-                return dist <= 10;
-            });
-
-            if (nearbyPoint) {
-                tempCoord = { x: nearbyPoint.x, y: nearbyPoint.y, locName: nearbyPoint.locName || "" };
-                document.getElementById('location-name').value = nearbyPoint.locName || "";
-            } else {
-                tempCoord = { x: clickX, y: clickY, locName: "" };
-                document.getElementById('location-name').value = "";
-            }
-
-            document.getElementById('location-name-box').classList.remove('hidden');
-            document.getElementById('save-btn').disabled = false;
-            render();
-        };
-
-        function save() {
-            const sid = document.getElementById('sid').value;
-            const group = document.getElementById('group-type').value;
-            const action = document.getElementById('action-select').value;
-            const locName = document.getElementById('location-name').value;
-
-            // 基礎欄位驗證
-            if(!group || !action) { 
-                alert("請填妥成員組合與行為項目！"); 
-                return; 
-            }
-
-            // 建立資料物件
-            const point = { 
-                id: sid, 
-                group: group, 
-                action: action,
-                locName: locName,
-                seq: path.length + 1,
-                map: document.getElementById('map-select').options[document.getElementById('map-select').selectedIndex].text,
-                x: tempCoord.x, 
-                y: tempCoord.y,
-                time: new Date().toISOString(),
-                timestamp: firebase.database.ServerValue.TIMESTAMP // Firebase 伺服器時間
-            };
-
-            // --- 步驟 A: 儲存至 Firebase ---
-            document.getElementById('status-bar').innerText = "同步中...";
+        // --- 步驟 A: 儲存至 Firebase ---
+        document.getElementById('status-bar').innerText = "同步中...";
     
-            // push() 會自動生成一個不重複的 ID (如 -Nx123...)
-            db.ref('research_data').push(point)
-                .then(() => {
-                    // --- 步驟 B: Firebase 成功後，更新本地狀態與畫布 ---
+        // push() 會自動生成一個不重複的 ID (如 -Nx123...)
+        db.ref('research_data').push(point)
+            .then(() => {
+                // --- 步驟 B: Firebase 成功後，更新本地狀態與畫布 ---
             
-                    // 同步更新 10px 同一座標點的名稱 (優化體驗)
-                    path.forEach(p => { 
-                        if (p.x === tempCoord.x && p.y === tempCoord.y) p.locName = locName; 
-                    });
-
-                    path.push(point);
-            
-                    // 同步存入 LocalStorage (用於目前的 log-viewer 邏輯)
-                    const all = JSON.parse(localStorage.getItem(KEY) || '[]');
-                    all.unshift(point);
-                    localStorage.setItem(KEY, JSON.stringify(all));
-
-                    // 重置 UI 狀態
-                    tempCoord = null;
-                    document.getElementById('save-btn').disabled = true;
-                    document.getElementById('location-name-box').classList.add('hidden');
-                    document.getElementById('status-bar').innerText = `✅ 同步成功 (${sid} 第 ${point.seq} 點)`;
-            
-                    render(); // 重新繪製地圖標註
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert("雲端同步失敗，請檢查網路連線！");
-                    document.getElementById('status-bar').innerText = "❌ 同步失敗";
+                // 同步更新 10px 同一座標點的名稱 (優化體驗)
+                path.forEach(p => { 
+                    if (p.x === tempCoord.x && p.y === tempCoord.y) p.locName = locName; 
                 });
-        }
-/*
-        function save() {
-            const sid = document.getElementById('sid').value;
-            const group = document.getElementById('group-type').value;
-            const action = document.getElementById('action-select').value;
-            const locName = document.getElementById('location-name').value;
 
-            if(!group || !action) { alert("請填妥成員組合與行為！"); return; }
-
-            const point = { 
-                id: sid, group: group, action: action,
-                locName: locName,
-                seq: path.length + 1,
-                map: document.getElementById('map-select').options[document.getElementById('map-select').selectedIndex].text,
-                x: tempCoord.x, y: tempCoord.y,
-                time: new Date().toISOString()
-            };
+                path.push(point);
             
-            // 同步更新 10px 同一座標點的名稱
-            path.forEach(p => { if (p.x === tempCoord.x && p.y === tempCoord.y) p.locName = locName; });
+                // 同步存入 LocalStorage (用於目前的 log-viewer 邏輯)
+                const all = JSON.parse(localStorage.getItem(KEY) || '[]');
+                all.unshift(point);
+                localStorage.setItem(KEY, JSON.stringify(all));
 
-            path.push(point);
-            const all = JSON.parse(localStorage.getItem(KEY) || '[]');
-            all.unshift(point);
-            localStorage.setItem(KEY, JSON.stringify(all));
-
-            tempCoord = null;
-            document.getElementById('save-btn').disabled = true;
-            document.getElementById('location-name-box').classList.add('hidden');
-            document.getElementById('status-bar').innerText = `點位儲存成功 (${sid})`;
-            render();
+                // 重置 UI 狀態
+                tempCoord = null;
+                document.getElementById('save-btn').disabled = true;
+                document.getElementById('location-name-box').classList.add('hidden');
+                document.getElementById('status-bar').innerText = `✅ 同步成功 (${sid} 第 ${point.seq} 點)`;
+            
+                render(); // 重新繪製地圖標註
+            })
+            .catch(err => {
+                console.error(err);
+                alert("雲端同步失敗，請檢查網路連線！");
+                document.getElementById('status-bar').innerText = "❌ 同步失敗";
+            });
         }
-*/
+
         // 下列輔助功能維持原樣
         function render() {
             container.querySelectorAll('.marker, .path-line, .marker-label').forEach(el => el.remove());
