@@ -148,220 +148,190 @@
     <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-database-compat.js"></script>
 
     <script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDeITI5O-sQ7opy_670e5bMtxP9os16QNs",
-    authDomain: "marine-biology-78685.firebaseapp.com",
-    databaseURL: "https://marine-biology-78685-default-rtdb.firebaseio.com",
-    projectId: "marine-biology-78685",
-    storageBucket: "marine-biology-78685.appspot.com",
-    messagingSenderId: "287865863826",
-    appId: "1:287865863826:web:f622ce81c78613e285f04b"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeITI5O-sQ7opy_670e5bMtxP9os16QNs",
+            authDomain: "marine-biology-78685.firebaseapp.com",
+            databaseURL: "https://marine-biology-78685-default-rtdb.firebaseio.com",
+            projectId: "marine-biology-78685",
+            storageBucket: "marine-biology-78685.appspot.com",
+            messagingSenderId: "287865863826",
+            appId: "1:287865863826:web:f622ce81c78613e285f04b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-let charts = {};
-let currentFilteredData = [];
+        let charts = {};
+        let currentFilteredData = [];
 
-function filterData(period) {
-    document.getElementById('filter-status').innerText = "🔍 同步數據中...";
-    db.ref('research_data').once('value').then(snapshot => {
-        const rawData = Object.values(snapshot.val() || {});
-        const now = new Date();
-        let filtered = rawData.filter(d => {
-            if (period === 'all') return true;
-            const entryDate = new Date(d.time);
-            if (period === 'day') return entryDate.toDateString() === now.toDateString();
-            if (period === 'week') return (now - entryDate) <= 7*86400000;
-            if (period === 'month') return (now - entryDate) <= 30*86400000;
-            if (period === 'year') return entryDate.getFullYear() === now.getFullYear();
-        });
-        filtered.sort((a, b) => new Date(a.time) - new Date(b.time));
-        currentFilteredData = filtered;
-        document.getElementById('filter-status').innerText = `✅ 完成 (筆數: ${filtered.length})`;
-        renderReports(filtered);
-    });
-}
-
-function renderReports(data) {
-    if (!data.length) return;
-    const uniqueIds = [...new Set(data.map(d => d.id))];
-
-    // 4-1 成員統計
-    const gCounts = {};
-    uniqueIds.forEach(id => {
-        const found = data.find(d => d.id === id);
-        if (found) gCounts[found.group] = (gCounts[found.group] || 0) + 1;
-    });
-    document.getElementById('table-4-1').innerHTML = Object.entries(gCounts)
-        .map(([k,v]) => `<tr><td class="table-cell font-bold">${k}</td><td class="table-cell text-right">${v} 組</td></tr>`).join('');
-    updatePieChart('chart-4-1', gCounts);
-
-    // 4-2 停留時間與地圖分析 (整合百分比座標)
-    const locationStats = {};
-    const mapPoints = []; 
-    let totalStaySec = 0;
-
-    uniqueIds.forEach(id => {
-        const userPoints = data.filter(d => d.id === id);
-        for (let i = 0; i < userPoints.length - 1; i++) {
-            const p1 = userPoints[i];
-            const p2 = userPoints[i+1];
-            const dur = (new Date(p2.time) - new Date(p1.time)) / 1000;
-            
-            const loc = p1.locName || "未命名";
-            if (!locationStats[loc]) locationStats[loc] = { total: 0, count: 0 };
-            locationStats[loc].total += dur;
-            locationStats[loc].count += 1;
-            totalStaySec += dur;
-
-            // 存入百分比座標
-            if(p1.x_pct) {
-                mapPoints.push({ x: p1.x_pct, y: p1.y_pct, map: p1.map, dur: dur });
-            }
+        function filterData(period) {
+            document.getElementById('filter-status').innerText = "🔍 同步數據中...";
+            db.ref('research_data').once('value').then(snapshot => {
+                const rawData = Object.values(snapshot.val() || {});
+                const now = new Date();
+                let filtered = rawData.filter(d => {
+                    if (period === 'all') return true;
+                    const entryDate = new Date(d.time);
+                    if (period === 'day') return entryDate.toDateString() === now.toDateString();
+                    if (period === 'week') return (now - entryDate) <= 7*86400000;
+                    if (period === 'month') return (now - entryDate) <= 30*86400000;
+                    if (period === 'year') return entryDate.getFullYear() === now.getFullYear();
+                });
+                filtered.sort((a, b) => new Date(a.time) - new Date(b.time));
+                currentFilteredData = filtered;
+                document.getElementById('filter-status').innerText = `✅ 完成 (筆數: ${filtered.length})`;
+                renderReports(filtered);
+            });
         }
-    });
 
-    renderMapHeat(mapPoints);
-    document.getElementById('avg-time').innerText = uniqueIds.length ? Math.round(totalStaySec/uniqueIds.length) + "s" : "0s";
-    let html42 = `<thead><tr class="bg-slate-50"><th class="table-header">區域</th><th class="table-header text-right">平均</th><th class="table-header text-right">樣本</th></tr></thead><tbody>`;
-    Object.entries(locationStats).forEach(([loc, s]) => {
-        html42 += `<tr><td class="table-cell font-bold truncate max-w-[100px]">${loc}</td><td class="table-cell text-right text-indigo-600 font-mono">${Math.round(s.total/s.count)}s</td><td class="table-cell text-right text-slate-400 text-[10px]">${s.count}次</td></tr>`;
-    });
-    document.getElementById('table-4-2-detail').innerHTML = html42 + "</tbody>";
+        function renderReports(data) {
+            if (!data.length) return;
+            const uniqueIds = [...new Set(data.map(d => d.id))];
 
-    // 4-6 行為統計
-    const aCounts = {};
-    data.forEach(d => aCounts[d.action] = (aCounts[d.action] || 0) + 1);
-    document.getElementById('table-4-6').innerHTML = Object.entries(aCounts)
-        .map(([k,v]) => `<tr><td class="table-cell">${k}</td><td class="table-cell text-right font-mono text-indigo-600">${v}</td></tr>`).join('');
-    updateBarChart('chart-4-6', aCounts);
+            // 4-1 成員統計
+            const gCounts = {};
+            uniqueIds.forEach(id => {
+                const found = data.find(d => d.id === id);
+                if (found) gCounts[found.group] = (gCounts[found.group] || 0) + 1;
+            });
+            document.getElementById('table-4-1').innerHTML = Object.entries(gCounts)
+                .map(([k,v]) => `<tr><td class="table-cell font-bold">${k}</td><td class="table-cell text-right">${v} 組</td></tr>`).join('');
+            updatePieChart('chart-4-1', gCounts);
 
-    // 原始數據
-    document.getElementById('raw-data-preview').innerHTML = data.slice(-15).reverse().map(d => 
-        `<tr class="border-b text-slate-500 hover:bg-slate-50"><td class="p-2">${d.id}</td><td class="p-2">${d.group}</td><td class="p-2">${d.action}</td><td class="p-2">${d.locName || '-'}</td><td class="p-2 text-[10px] whitespace-nowrap">${new Date(d.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td></tr>`
-    ).join('');
-}
+            // 4-2 停留時間與地圖分析 (整合百分比座標)
+            const locationStats = {};
+            const mapPoints = []; 
+            let totalStaySec = 0;
 
-function renderMapHeat(points) {
-    document.querySelectorAll('.heat-point').forEach(el => el.remove());
+            uniqueIds.forEach(id => {
+                const userPoints = data.filter(d => d.id === id);
+                for (let i = 0; i < userPoints.length - 1; i++) {
+                    const p1 = userPoints[i];
+                    const p2 = userPoints[i+1];
+                    const dur = (new Date(p2.time) - new Date(p1.time)) / 1000;
+            
+                    const loc = p1.locName || "未命名";
+                    if (!locationStats[loc]) locationStats[loc] = { total: 0, count: 0 };
+                    locationStats[loc].total += dur;
+                    locationStats[loc].count += 1;
+                    totalStaySec += dur;
+
+                    // 存入百分比座標
+                    if(p1.x_pct) {
+                        mapPoints.push({ x: p1.x_pct, y: p1.y_pct, map: p1.map, dur: dur });
+                    }
+                }
+            });
+
+            renderMapHeat(mapPoints);
+            document.getElementById('avg-time').innerText = uniqueIds.length ? Math.round(totalStaySec/uniqueIds.length) + "s" : "0s";
+            let html42 = `<thead><tr class="bg-slate-50"><th class="table-header">區域</th><th class="table-header text-right">平均</th><th class="table-header text-right">樣本</th></tr></thead><tbody>`;
+            Object.entries(locationStats).forEach(([loc, s]) => {
+                html42 += `<tr><td class="table-cell font-bold truncate max-w-[100px]">${loc}</td><td class="table-cell text-right text-indigo-600 font-mono">${Math.round(s.total/s.count)}s</td><td class="table-cell text-right text-slate-400 text-[10px]">${s.count}次</td></tr>`;
+            });
+            document.getElementById('table-4-2-detail').innerHTML = html42 + "</tbody>";
+
+            // 4-6 行為統計
+            const aCounts = {};
+            data.forEach(d => aCounts[d.action] = (aCounts[d.action] || 0) + 1);
+            document.getElementById('table-4-6').innerHTML = Object.entries(aCounts)
+                .map(([k,v]) => `<tr><td class="table-cell">${k}</td><td class="table-cell text-right font-mono text-indigo-600">${v}</td></tr>`).join('');
+            updateBarChart('chart-4-6', aCounts);
+
+            // 原始數據
+            document.getElementById('raw-data-preview').innerHTML = data.slice(-15).reverse().map(d => 
+                `<tr class="border-b text-slate-500 hover:bg-slate-50"><td class="p-2">${d.id}</td><td class="p-2">${d.group}</td><td class="p-2">${d.action}</td><td class="p-2">${d.locName || '-'}</td><td class="p-2 text-[10px] whitespace-nowrap">${new Date(d.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td></tr>`
+            ).join('');
+        }
+
+        function renderMapHeat(points) {
+            document.querySelectorAll('.heat-point').forEach(el => el.remove());
     
-    const coordMap = {};
-    points.forEach(p => {
-        const key = `${p.map}-${Math.round(p.x)}-${Math.round(p.y)}`;
-        if (!coordMap[key]) coordMap[key] = { x: p.x, y: p.y, map: p.map, totalDur: 0, count: 0 };
-        coordMap[key].totalDur += p.dur;
-        coordMap[key].count += 1;
-    });
+            const coordMap = {};
+            points.forEach(p => {
+                const key = `${p.map}-${Math.round(p.x)}-${Math.round(p.y)}`;
+                if (!coordMap[key]) coordMap[key] = { x: p.x, y: p.y, map: p.map, totalDur: 0, count: 0 };
+                coordMap[key].totalDur += p.dur;
+                coordMap[key].count += 1;
+            });
 
-    Object.values(coordMap).forEach(p => {
-        const avgDur = p.totalDur / p.count;
-        const mapId = getMapIdByName(p.map);
-        const container = document.getElementById(`map-container-${mapId}`);
+            Object.values(coordMap).forEach(p => {
+                const avgDur = p.totalDur / p.count;
+                const mapId = getMapIdByName(p.map);
+                const container = document.getElementById(`map-container-${mapId}`);
         
-        if (container) {
-            const dot = document.createElement('div');
-            dot.className = 'heat-point';
-            dot.style.left = `${p.x}%`;
-            dot.style.top = `${p.y}%`;
+                if (container) {
+                    const dot = document.createElement('div');
+                    dot.className = 'heat-point';
+                    dot.style.left = `${p.x}%`;
+                    dot.style.top = `${p.y}%`;
             
-            // --- 縮小圓圈計算邏輯 ---
-            // 基礎 8px，每秒增加 0.5px，最高不超過 30px (原本是 50px)
-            const size = Math.min(30, 3 + (avgDur * 0.1)); 
+                    // --- 縮小圓圈計算邏輯 ---
+                    // 基礎 8px，每秒增加 0.5px，最高不超過 30px (原本是 50px)
+                    const size = Math.min(30, 3 + (avgDur * 0.1)); 
             
-            dot.style.width = size + 'px';
-            dot.style.height = size + 'px';
+                    dot.style.width = size + 'px';
+                    dot.style.height = size + 'px';
             
-            // 增加一些透明度讓重疊處更清晰
-            dot.style.background = "rgba(79, 70, 229, 0.4)"; 
+                    // 增加一些透明度讓重疊處更清晰
+                    dot.style.background = "rgba(79, 70, 229, 0.4)"; 
             
-            container.appendChild(dot);
+                    container.appendChild(dot);
+                }
+            });
         }
-    });
-}
-/*
-function renderMapHeat(points) {
-    document.querySelectorAll('.heat-point').forEach(el => el.remove());
-    
-    const coordMap = {};
-    points.forEach(p => {
-        const key = `${p.map}-${Math.round(p.x)}-${Math.round(p.y)}`;
-        if (!coordMap[key]) coordMap[key] = { x: p.x, y: p.y, map: p.map, totalDur: 0, count: 0 };
-        coordMap[key].totalDur += p.dur;
-        coordMap[key].count += 1;
-    });
 
-    Object.values(coordMap).forEach(p => {
-        const avgDur = p.totalDur / p.count;
-        const mapId = getMapIdByName(p.map);
-        const container = document.getElementById(`map-container-${mapId}`);
-        if (container) {
-            const dot = document.createElement('div');
-            dot.className = 'heat-point';
-            // 核心：使用百分比定位，適應所有螢幕大小
-            dot.style.left = `${p.x}%`;
-            dot.style.top = `${p.y}%`;
-            
-            const size = Math.min(50, 12 + (avgDur * 1.2));
-            dot.style.width = size + 'px';
-            dot.style.height = size + 'px';
-            container.appendChild(dot);
+        function getMapIdByName(name) {
+            if (name.includes("臺灣")) return "map1";
+            if (name.includes("珊瑚")) return "map2";
+            if (name.includes("1,2F")) return "map3";
+            return "map4";
         }
-    });
-}
-*/
-function getMapIdByName(name) {
-    if (name.includes("臺灣")) return "map1";
-    if (name.includes("珊瑚")) return "map2";
-    if (name.includes("1,2F")) return "map3";
-    return "map4";
-}
 
-function updatePieChart(id, dataMap) {
-    if (charts[id]) charts[id].destroy();
-    charts[id] = new Chart(document.getElementById(id), {
-        type: 'doughnut', // 使用環形圖在手機上更美觀
-        data: {
-            labels: Object.keys(dataMap),
-            datasets: [{ data: Object.values(dataMap), backgroundColor: ['#4f46e5', '#818cf8', '#c7d2fe', '#312e81', '#e0e7ff'], borderWeight: 0 }]
-        },
-        options: { 
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } 
+        function updatePieChart(id, dataMap) {
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(document.getElementById(id), {
+                type: 'doughnut', // 使用環形圖在手機上更美觀
+                data: {
+                    labels: Object.keys(dataMap),
+                    datasets: [{ data: Object.values(dataMap), backgroundColor: ['#4f46e5', '#818cf8', '#c7d2fe', '#312e81', '#e0e7ff'], borderWeight: 0 }]
+                },
+                options: { 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } 
+                }
+            });
         }
-    });
-}
 
-function updateBarChart(id, dataMap) {
-    if (charts[id]) charts[id].destroy();
-    charts[id] = new Chart(document.getElementById(id), {
-        type: 'bar',
-        data: {
-            labels: Object.keys(dataMap),
-            datasets: [{ label: '次數', data: Object.values(dataMap), backgroundColor: '#818cf8', borderRadius: 4 }]
-        },
-        options: { 
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            plugins: { legend: { display: false } },
-            scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+        function updateBarChart(id, dataMap) {
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(document.getElementById(id), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(dataMap),
+                    datasets: [{ label: '次數', data: Object.values(dataMap), backgroundColor: '#818cf8', borderRadius: 4 }]
+                },
+                options: { 
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+                }
+            });
         }
-    });
-}
 
-function exportToExcel() {
-    let csv = "\ufeff個案編號,成員組合,行為項目,位置名稱,館區,時間\n";
-    currentFilteredData.forEach(d => {
-        csv += `${d.id},${d.group},${d.action},${d.locName},${d.map},${new Date(d.time).toLocaleString()}\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `NMMBA_Report_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
-}
+        function exportToExcel() {
+            let csv = "\ufeff個案編號,成員組合,行為項目,位置名稱,館區,時間\n";
+            currentFilteredData.forEach(d => {
+                csv += `${d.id},${d.group},${d.action},${d.locName},${d.map},${new Date(d.time).toLocaleString()}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `NMMBA_Report_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
 
-window.onload = () => filterData('all');
+        window.onload = () => filterData('all');
     </script>
 </body>
 </html>
