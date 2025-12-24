@@ -133,6 +133,112 @@
             });
         }
 
+        // --- 修改後的核心載入邏輯 ---
+
+// 1. 初始化與切換地圖時調用
+function loadHistoryLocations() {
+    const mapSelect = document.getElementById('map-select');
+    const currentMapName = mapSelect.options[mapSelect.selectedIndex].text;
+    
+    document.getElementById('status-bar').innerText = `🔍 正在同步 ${currentMapName} 的位置標籤...`;
+
+    db.ref('research_data').once('value').then(snap => {
+        const data = snapshotToArray(snap.val());
+        const uniqueLocs = {};
+
+        // 只過濾出屬於「目前館區」且「有百分比座標」的紀錄
+        data.filter(d => d.map === currentMapName && d.x_pct !== undefined).forEach(d => {
+            // 以名稱為 Key，確保地圖上同一個名字只出現一次，並取最後更新的座標
+            uniqueLocs[d.locName] = { 
+                x: d.x_pct, 
+                y: d.y_pct, 
+                name: d.locName 
+            };
+        });
+
+        historyLocations = Object.values(uniqueLocs);
+        console.log("已載入歷史位置:", historyLocations); // 除錯用
+        
+        document.getElementById('status-bar').innerText = `✅ 已同步 ${historyLocations.length} 個標籤`;
+        render(); // 強制重繪地圖
+    }).catch(err => {
+        console.error("載入失敗:", err);
+        document.getElementById('status-bar').innerText = "❌ 無法讀取歷史位置";
+    });
+}
+
+// 輔助函式：將 Firebase 物件轉為陣列
+function snapshotToArray(snapshot) {
+    if (!snapshot) return [];
+    return Object.keys(snapshot).map(key => snapshot[key]);
+}
+
+// 2. 修改 render 函數，確保歷史標籤優先繪製
+function render() {
+    // 清除舊有的所有標籤與連線
+    const elementsToRemove = container.querySelectorAll('.marker, .path-line, .marker-label, .history-label');
+    elementsToRemove.forEach(el => el.remove());
+    
+    // A. 繪製歷史位置標籤 (背景參考層)
+    historyLocations.forEach(loc => {
+        const hl = document.createElement('div');
+        hl.className = 'history-label';
+        hl.style.left = loc.x + '%';
+        hl.style.top = loc.y + '%';
+        hl.innerText = `📍 ${loc.name}`; // 加上圖示增加辨識度
+        
+        // 點擊事件：直接選取該位置
+        hl.onclick = (e) => {
+            e.stopPropagation(); // 防止觸發下層的 container.onclick
+            selectHistory(loc.name, loc.x, loc.y);
+        };
+        container.appendChild(hl);
+    });
+
+    // B. 繪製目前個案的動線 (操作層)
+    path.forEach((p, i) => {
+        const m = document.createElement('div'); 
+        m.className = 'marker';
+        m.style.left = p.x_pct + '%'; 
+        m.style.top = p.y_pct + '%';
+        m.innerText = p.seq; 
+        container.appendChild(m);
+        
+        const l = document.createElement('div'); 
+        l.className = 'marker-label';
+        l.style.left = p.x_pct + '%'; 
+        l.style.top = p.y_pct + '%';
+        l.innerText = p.locName; 
+        container.appendChild(l);
+        
+        if (i > 0) drawLine(path[i-1], p);
+    });
+
+    // C. 暫存點
+    if (tempCoord) {
+        const t = document.createElement('div'); 
+        t.className = 'marker marker-temp';
+        t.style.left = tempCoord.x_pct + '%'; 
+        t.style.top = tempCoord.y_pct + '%';
+        t.innerText = '+'; 
+        container.appendChild(t);
+    }
+}
+
+// 3. 修改 changeMap 函數，確保切換時圖片與資料同步
+function changeMap(val) {
+    // 切換圖片顯示
+    document.querySelectorAll('.map-image').forEach(img => img.classList.remove('active'));
+    document.getElementById(val).classList.add('active');
+    
+    // 清空目前動線
+    path = []; 
+    tempCoord = null;
+    
+    // 重新載入該地圖的位置資料
+    loadHistoryLocations();
+}
+/*
         // 載入歷史位置（用於地圖上顯示標籤）
         function loadHistoryLocations() {
             const currentMapName = document.getElementById('map-select').options[document.getElementById('map-select').selectedIndex].text;
@@ -147,7 +253,7 @@
                 render();
             });
         }
-
+*/
         function handleDynamicSelect(select, key) {
             if (select.value === 'ADD_NEW') {
                 const n = prompt("請輸入新名稱:");
@@ -232,7 +338,7 @@
                 render();
             });
         }
-
+/*
         function render() {
             container.querySelectorAll('.marker, .path-line, .marker-label, .history-label').forEach(el => el.remove());
             
@@ -267,7 +373,7 @@
                 t.innerText = '+'; container.appendChild(t);
             }
         }
-
+*/
         function drawLine(p1, p2) {
             const l = document.createElement('div'); l.className = 'path-line';
             const dx = (p2.x_pct - p1.x_pct) * (container.clientWidth / 100);
@@ -294,13 +400,14 @@
                 document.getElementById('sid').value = "A" + (Math.max(0, ...numbers) + 1).toString().padStart(2, '0');
             });
         }
-
+/*
         function changeMap(val) {
             document.querySelectorAll('.map-image').forEach(img => img.classList.remove('active'));
             document.getElementById(val).classList.add('active');
             path = []; 
             loadHistoryLocations(); // 切換地圖時載入該館歷史位置
         }
+*/            
     </script>
 </body>
 </html>
