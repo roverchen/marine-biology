@@ -118,10 +118,31 @@
         let historyLocations = [];
         const container = document.getElementById('map-wrapper');
 
-        window.onload = () => { initSyncOptions(); refreshID(); loadHistoryLocations(); };
-
+        //window.onload = () => { initSyncOptions(); refreshID(); loadHistoryLocations(); };
+        window.onload = () => { 
+            restoreMapPreference(); // 優先還原地圖選擇
+            initSyncOptions(); 
+            refreshID(); 
+            loadHistoryLocations(); 
+        };
+        
         // 監聽視窗縮放以重繪連線
         window.onresize = () => render();
+
+        function restoreMapPreference() {
+            const lastMap = localStorage.getItem('selectedMap');
+            if (lastMap) {
+                const select = document.getElementById('map-select');
+                // 檢查儲存的 ID 是否還存在於選單中
+                if (Array.from(select.options).some(opt => opt.value === lastMap)) {
+                    select.value = lastMap;
+                    // 同步更新地圖圖片的 active 狀態
+                    document.querySelectorAll('.map-image').forEach(img => img.classList.remove('active'));
+                    const targetImg = document.getElementById(lastMap);
+                    if (targetImg) targetImg.classList.add('active');
+                }
+            }
+        }
 
         function initSyncOptions() {
             const configs = [
@@ -254,11 +275,24 @@
                 render();
             });
         }
-
+/*
         function changeMap(val) {
             document.querySelectorAll('.map-image').forEach(img => img.classList.remove('active'));
             document.getElementById(val).classList.add('active');
             path = []; tempCoord = null; loadHistoryLocations();
+        }
+*/
+        function changeMap(val) {
+            // 儲存選擇到記憶中
+            localStorage.setItem('selectedMap', val);
+    
+            document.querySelectorAll('.map-image').forEach(img => img.classList.remove('active'));
+            const targetImg = document.getElementById(val);
+            if (targetImg) targetImg.classList.add('active');
+    
+            path = []; 
+            tempCoord = null; 
+            loadHistoryLocations();
         }
 
         function finishAndNext() { refreshID(); path = []; tempCoord = null; render(); }
