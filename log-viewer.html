@@ -158,6 +158,35 @@
         let currentFilteredData = [];
 
         function filterData(period) {
+    updateButtonUI(period);
+    document.getElementById('filter-status').innerText = "🔍 同步數據中...";
+    
+    db.ref('research_data').once('value').then(snapshot => {
+        const rawData = Object.values(snapshot.val() || {});
+        const now = new Date();
+        const todayStr = now.toLocaleDateString(); // 使用在地日期格式
+
+        let filtered = rawData.filter(d => {
+            if (period === 'all') return true;
+            const entryDate = new Date(d.time);
+            
+            if (period === 'day') {
+                return entryDate.toLocaleDateString() === todayStr; // 💡 統一使用在地格式比對
+            }
+            // ... 週、月、年保持不變 ...
+            if (period === 'week') return (now - entryDate) <= 7*86400000;
+            if (period === 'month') return (now - entryDate) <= 30*86400000;
+            if (period === 'year') return entryDate.getFullYear() === now.getFullYear();
+        });
+        
+        filtered.sort((a, b) => new Date(a.time) - new Date(b.time));
+        currentFilteredData = filtered;
+        document.getElementById('filter-status').innerText = `✅ 完成 (筆數: ${filtered.length})`;
+        renderReports(filtered);
+    });
+}
+/*
+        function filterData(period) {
             updateButtonUI(period); // 更新按鈕視覺
             document.getElementById('filter-status').innerText = "🔍 同步數據中...";
             
@@ -178,7 +207,7 @@
                 renderReports(filtered);
             });
         }
-
+*/
         // 視覺化回饋：標示目前選中的篩選器
         function updateButtonUI(period) {
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -191,6 +220,81 @@
         }
 
         // 其餘渲染函式 (renderReports, renderMapHeat, etc.) 保持不變...
+        function renderReports(data) {
+    // 💡 核心修正 1：不論有沒有數據，先「徹底清空」舊畫面的內容
+    document.getElementById('table-4-1').innerHTML = "";
+    document.getElementById('table-4-2-detail').innerHTML = "";
+    document.getElementById('table-4-6').innerHTML = "";
+    document.getElementById('raw-data-preview').innerHTML = "";
+    document.getElementById('avg-time').innerText = "0s";
+    
+    // 清空地圖熱力點
+    document.querySelectorAll('.heat-point').forEach(el => el.remove());
+
+    // 💡 核心修正 2：如果沒數據，顯示提示訊息後就結束
+    if (!data || data.length === 0) {
+        document.getElementById('table-4-1').innerHTML = "<tr><td class='p-4 text-slate-400 italic'>本日尚無觀測數據</td></tr>";
+        // 銷毀舊圖表，避免視覺誤導
+        if (charts['chart-4-1']) charts['chart-4-1'].destroy();
+        if (charts['chart-4-6']) charts['chart-4-6'].destroy();
+        return;
+    }
+
+    // --- 以下為原本的計算邏輯，保持不變 ---
+    const uniqueIds = [...new Set(data.map(d => d.id))];
+
+    // 4-1 成員統計
+    const gCounts = {};
+    uniqueIds.forEach(id => {
+        const found = data.find(d => d.id === id);
+        if (found) gCounts[found.group] = (gCounts[found.group] || 0) + 1;
+    });
+    document.getElementById('table-4-1').innerHTML = Object.entries(gCounts)
+        .map(([k,v]) => `<tr><td class="table-cell font-bold">${k}</td><td class="table-cell text-right">${v} 組</td></tr>`).join('');
+    updatePieChart('chart-4-1', gCounts);
+
+    // 4-2 停留時間與地圖分析
+    const locationStats = {};
+    const mapPoints = []; 
+    let totalStaySec = 0;
+
+    uniqueIds.forEach(id => {
+        const userPoints = data.filter(d => d.id === id);
+        for (let i = 0; i < userPoints.length - 1; i++) {
+            const p1 = userPoints[i];
+            const p2 = userPoints[i+1];
+            const dur = (new Date(p2.time) - new Date(p1.time)) / 1000;
+            const loc = p1.locName || "未命名";
+            if (!locationStats[loc]) locationStats[loc] = { total: 0, count: 0 };
+            locationStats[loc].total += dur;
+            locationStats[loc].count += 1;
+            totalStaySec += dur;
+            if(p1.x_pct) mapPoints.push({ x: p1.x_pct, y: p1.y_pct, map: p1.map, dur: dur });
+        }
+    });
+
+    renderMapHeat(mapPoints);
+    document.getElementById('avg-time').innerText = uniqueIds.length ? Math.round(totalStaySec/uniqueIds.length) + "s" : "0s";
+    
+    let html42 = `<thead><tr class="bg-slate-50"><th class="table-header">區域</th><th class="table-header text-right">平均</th><th class="table-header text-right">樣本</th></tr></thead><tbody>`;
+    Object.entries(locationStats).sort((a,b) => b[1].total/b[1].count - a[1].total/a[1].count).forEach(([loc, s]) => {
+        html42 += `<tr><td class="table-cell font-bold">${loc}</td><td class="table-cell text-right text-indigo-600 font-mono">${Math.round(s.total/s.count)}s</td><td class="table-cell text-right text-slate-400 text-[10px]">${s.count}次</td></tr>`;
+    });
+    document.getElementById('table-4-2-detail').innerHTML = html42 + "</tbody>";
+
+    // 4-6 行為統計
+    const aCounts = {};
+    data.forEach(d => aCounts[d.action] = (aCounts[d.action] || 0) + 1);
+    document.getElementById('table-4-6').innerHTML = Object.entries(aCounts)
+        .map(([k,v]) => `<tr><td class="table-cell">${k}</td><td class="table-cell text-right font-mono text-indigo-600">${v}</td></tr>`).join('');
+    updateBarChart('chart-4-6', aCounts);
+
+    // 原始數據
+    document.getElementById('raw-data-preview').innerHTML = data.slice(-15).reverse().map(d => 
+        `<tr class="border-b text-slate-500"><td class="p-2">${d.id}</td><td class="p-2">${d.group}</td><td class="p-2">${d.action}</td><td class="p-2">${d.locName || '-'}</td><td class="p-2 text-[10px]">${new Date(d.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td></tr>`
+    ).join('');
+}
+/*
         function renderReports(data) {
             if (!data.length) {
                 // 若無數據，清空圖表與內容
@@ -249,7 +353,7 @@
                 `<tr class="border-b text-slate-500"><td class="p-2">${d.id}</td><td class="p-2">${d.group}</td><td class="p-2">${d.action}</td><td class="p-2">${d.locName || '-'}</td><td class="p-2 text-[10px]">${new Date(d.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td></tr>`
             ).join('');
         }
-
+*/
         function renderMapHeat(points) {
             document.querySelectorAll('.heat-point').forEach(el => el.remove());
             const coordMap = {};
