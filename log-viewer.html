@@ -7,13 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 基礎卡片樣式優化 */
         .report-card { background: white; border-radius: 1rem; padding: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
         .table-header { background-color: #f8fafc; color: #64748b; font-size: 11px; font-weight: 700; padding: 0.75rem; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; }
         .table-cell { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; color: #334155; }
         .stat-val { font-size: 1.875rem; font-weight: 900; color: #4f46e5; }
         
-        /* 響應式地圖容器：讓四張地圖在手機上變為 2x2 或 1x1 */
         .map-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; }
         @media (min-width: 640px) { .map-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (min-width: 1024px) { .map-grid { grid-template-columns: repeat(4, 1fr); } }
@@ -24,24 +22,24 @@
             border: 1px solid #e2e8f0; 
             border-radius: 12px; 
             overflow: hidden; 
-            background: #f1f5f9; /* 加上底色，不裁切時若比例不合會有留白 */
+            background: #f1f5f9;
             margin-bottom: 10px;
         }
 
         .map-analysis-img { 
             width: 100%; 
             height: auto; 
-            max-height: 400px; /* 限制最大高度，避免手機版拉太長 */
-            object-fit: contain; /* 核心修正：確保圖片完整顯示不被切掉 */
+            max-height: 400px; 
+            object-fit: contain; 
             display: block; 
             opacity: 0.8; 
-        
         }
-        /* 熱力點：使用百分比定位以達成響應式 */
         .heat-point { position: absolute; background: rgba(79, 70, 229, 0.6); border: 1.5px solid white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; transition: all 0.3s ease; }
-        
-        /* 圖表容器高度限制，防止手機版過長 */
         .chart-container { position: relative; height: 260px; width: 100%; }
+
+        /* 篩選按鈕選中樣式 */
+        .filter-btn { transition: all 0.2s; border: 1px solid rgba(255,255,255,0.3); }
+        .filter-btn.active { background-color: white !important; color: #4f46e5 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
 
         @media print { .no-print { display: none; } }
     </style>
@@ -51,7 +49,7 @@
         
         <div class="no-print space-y-4 mb-6">
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <button onclick="history.back()" class="text-indigo-600 font-bold hover:underline flex items-center gap-1">⬅️ <span class="hidden sm:inline">返回紀錄端</span><span class="sm:hidden">返回</span></button>
+                <button onclick="history.back()" class="text-indigo-600 font-bold hover:underline flex items-center gap-1">⬅️ 返回紀錄端</button>
                 <button onclick="exportToExcel()" class="w-full sm:w-auto bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition-all flex justify-center items-center gap-2">
                     📊 輸出 CSV 報表
                 </button>
@@ -59,12 +57,12 @@
 
             <div class="bg-indigo-600 p-5 rounded-2xl shadow-lg text-white">
                 <h2 class="text-sm font-bold mb-3 flex items-center gap-2">📅 報表時間週期篩選</h2>
-                <div class="grid grid-cols-3 md:grid-cols-5 gap-2 text-xs">
-                    <button onclick="filterData('all')" class="bg-white/20 hover:bg-white/40 py-2 rounded-lg border border-white/30 font-bold transition-colors">全部</button>
-                    <button onclick="filterData('day')" class="bg-white/20 hover:bg-white/40 py-2 rounded-lg border border-white/30 font-bold transition-colors">今日</button>
-                    <button onclick="filterData('week')" class="bg-white/20 hover:bg-white/40 py-2 rounded-lg border border-white/30 font-bold transition-colors">週報</button>
-                    <button onclick="filterData('month')" class="bg-white/20 hover:bg-white/40 py-2 rounded-lg border border-white/30 font-bold transition-colors text-white">月報</button>
-                    <button onclick="filterData('year')" class="bg-white/20 hover:bg-white/40 py-2 rounded-lg border border-white/30 font-bold transition-colors text-white">年報</button>
+                <div class="grid grid-cols-3 md:grid-cols-5 gap-2 text-xs" id="filter-group">
+                    <button data-period="day" onclick="filterData('day')" class="filter-btn bg-white/20 hover:bg-white/40 py-2 rounded-lg font-bold">今日</button>
+                    <button data-period="all" onclick="filterData('all')" class="filter-btn bg-white/20 hover:bg-white/40 py-2 rounded-lg font-bold">全部</button>
+                    <button data-period="week" onclick="filterData('week')" class="filter-btn bg-white/20 hover:bg-white/40 py-2 rounded-lg font-bold">週報</button>
+                    <button data-period="month" onclick="filterData('month')" class="filter-btn bg-white/20 hover:bg-white/40 py-2 rounded-lg font-bold">月報</button>
+                    <button data-period="year" onclick="filterData('year')" class="filter-btn bg-white/20 hover:bg-white/40 py-2 rounded-lg font-bold">年報</button>
                 </div>
                 <p id="filter-status" class="mt-3 text-indigo-100 text-[10px] italic">同步中...</p>
             </div>
@@ -77,9 +75,7 @@
                 <h3 class="font-black text-indigo-600 mb-4 border-b pb-2 text-sm md:text-base">表 4-1：成員組合統計與佔比</h3>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left min-w-[200px]">
-                            <tbody id="table-4-1"></tbody>
-                        </table>
+                        <table class="w-full text-left min-w-[200px]"><tbody id="table-4-1"></tbody></table>
                     </div>
                     <div class="chart-container flex justify-center items-center">
                         <canvas id="chart-4-1"></canvas>
@@ -88,30 +84,28 @@
             </div>
 
             <div class="report-card">
-                <h3 class="font-black text-indigo-600 mb-4 border-b pb-2 text-sm md:text-base">表 4-2：各區域停留熱力 (圓圈大 = 停留長)</h3>
-                
+                <h3 class="font-black text-indigo-600 mb-4 border-b pb-2 text-sm md:text-base">表 4-2：各區域停留熱力</h3>
                 <div class="map-grid mb-6">
                     <div class="map-analysis-container" id="map-container-map1">
-                        <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10 backdrop-blur-sm">臺灣水域館</span>
+                        <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10">臺灣水域館</span>
                         <img src="https://ws.nmmba.gov.tw/001/Upload/226/ckfile/f9f83808-8917-4d91-be95-98955736b763.jpg" class="map-analysis-img">
                     </div>
                     <div class="map-analysis-container" id="map-container-map2">
-                        <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10 backdrop-blur-sm">珊瑚王國館</span>
+                        <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10">珊瑚王國館</span>
                         <img src="https://ws.nmmba.gov.tw/001/Upload/226/ckfile/aeee9399-5776-4dc9-bc34-74f3de9610ad.jpg" class="map-analysis-img">
                     </div>
                     <div class="map-analysis-container" id="map-container-map3">
-                        <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10 backdrop-blur-sm">世界水域 1,2F</span>
+                        <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10">世界水域 1,2F</span>
                         <img src="https://ws.nmmba.gov.tw/001/Upload/226/ckfile/be3ac2e6-4910-4308-9c19-d797081ea4e1.jpg" class="map-analysis-img">
                     </div>
                     <div class="map-analysis-container" id="map-container-map4">
-                        <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10 backdrop-blur-sm">世界水域 3F</span>
+                        <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10">世界水域 3F</span>
                         <img src="https://ws.nmmba.gov.tw/001/Upload/226/ckfile/c7e10c76-a9aa-49ea-abe4-81066e8fd518.jpg" class="map-analysis-img">
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="md:col-span-1 flex flex-col justify-center items-center p-4 bg-indigo-50 rounded-xl">
-                        <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">全館平均停留時間</p>
+                        <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">平均停留時間</p>
                         <div id="avg-time" class="stat-val">0s</div>
                     </div>
                     <div class="md:col-span-2 overflow-x-auto">
@@ -132,9 +126,9 @@
                 </div>
             </div>
 
-            <div class="report-card overflow-hidden">
+            <div class="report-card">
                 <h3 class="font-black text-indigo-600 mb-4 border-b pb-2 text-sm md:text-base">最新 15 筆原始流水帳</h3>
-                <div class="overflow-x-auto -mx-5 px-5">
+                <div class="overflow-x-auto">
                     <table class="w-full text-left text-[10px] md:text-xs">
                         <thead><tr class="bg-slate-50"><th class="p-2">編號</th><th class="p-2">組合</th><th class="p-2">行為</th><th class="p-2">位置</th><th class="p-2">時間</th></tr></thead>
                         <tbody id="raw-data-preview"></tbody>
@@ -164,7 +158,9 @@
         let currentFilteredData = [];
 
         function filterData(period) {
+            updateButtonUI(period); // 更新按鈕視覺
             document.getElementById('filter-status').innerText = "🔍 同步數據中...";
+            
             db.ref('research_data').once('value').then(snapshot => {
                 const rawData = Object.values(snapshot.val() || {});
                 const now = new Date();
@@ -183,8 +179,24 @@
             });
         }
 
+        // 視覺化回饋：標示目前選中的篩選器
+        function updateButtonUI(period) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.getAttribute('data-period') === period) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // 其餘渲染函式 (renderReports, renderMapHeat, etc.) 保持不變...
         function renderReports(data) {
-            if (!data.length) return;
+            if (!data.length) {
+                // 若無數據，清空圖表與內容
+                document.getElementById('avg-time').innerText = "0s";
+                return;
+            };
             const uniqueIds = [...new Set(data.map(d => d.id))];
 
             // 4-1 成員統計
@@ -197,7 +209,7 @@
                 .map(([k,v]) => `<tr><td class="table-cell font-bold">${k}</td><td class="table-cell text-right">${v} 組</td></tr>`).join('');
             updatePieChart('chart-4-1', gCounts);
 
-            // 4-2 停留時間與地圖分析 (整合百分比座標)
+            // 4-2 停留時間與地圖分析
             const locationStats = {};
             const mapPoints = []; 
             let totalStaySec = 0;
@@ -208,25 +220,20 @@
                     const p1 = userPoints[i];
                     const p2 = userPoints[i+1];
                     const dur = (new Date(p2.time) - new Date(p1.time)) / 1000;
-            
                     const loc = p1.locName || "未命名";
                     if (!locationStats[loc]) locationStats[loc] = { total: 0, count: 0 };
                     locationStats[loc].total += dur;
                     locationStats[loc].count += 1;
                     totalStaySec += dur;
-
-                    // 存入百分比座標
-                    if(p1.x_pct) {
-                        mapPoints.push({ x: p1.x_pct, y: p1.y_pct, map: p1.map, dur: dur });
-                    }
+                    if(p1.x_pct) mapPoints.push({ x: p1.x_pct, y: p1.y_pct, map: p1.map, dur: dur });
                 }
             });
 
             renderMapHeat(mapPoints);
             document.getElementById('avg-time').innerText = uniqueIds.length ? Math.round(totalStaySec/uniqueIds.length) + "s" : "0s";
             let html42 = `<thead><tr class="bg-slate-50"><th class="table-header">區域</th><th class="table-header text-right">平均</th><th class="table-header text-right">樣本</th></tr></thead><tbody>`;
-            Object.entries(locationStats).forEach(([loc, s]) => {
-                html42 += `<tr><td class="table-cell font-bold truncate max-w-[100px]">${loc}</td><td class="table-cell text-right text-indigo-600 font-mono">${Math.round(s.total/s.count)}s</td><td class="table-cell text-right text-slate-400 text-[10px]">${s.count}次</td></tr>`;
+            Object.entries(locationStats).sort((a,b) => b[1].total/b[1].count - a[1].total/a[1].count).forEach(([loc, s]) => {
+                html42 += `<tr><td class="table-cell font-bold">${loc}</td><td class="table-cell text-right text-indigo-600 font-mono">${Math.round(s.total/s.count)}s</td><td class="table-cell text-right text-slate-400 text-[10px]">${s.count}次</td></tr>`;
             });
             document.getElementById('table-4-2-detail').innerHTML = html42 + "</tbody>";
 
@@ -239,13 +246,12 @@
 
             // 原始數據
             document.getElementById('raw-data-preview').innerHTML = data.slice(-15).reverse().map(d => 
-                `<tr class="border-b text-slate-500 hover:bg-slate-50"><td class="p-2">${d.id}</td><td class="p-2">${d.group}</td><td class="p-2">${d.action}</td><td class="p-2">${d.locName || '-'}</td><td class="p-2 text-[10px] whitespace-nowrap">${new Date(d.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td></tr>`
+                `<tr class="border-b text-slate-500"><td class="p-2">${d.id}</td><td class="p-2">${d.group}</td><td class="p-2">${d.action}</td><td class="p-2">${d.locName || '-'}</td><td class="p-2 text-[10px]">${new Date(d.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td></tr>`
             ).join('');
         }
 
         function renderMapHeat(points) {
             document.querySelectorAll('.heat-point').forEach(el => el.remove());
-    
             const coordMap = {};
             points.forEach(p => {
                 const key = `${p.map}-${Math.round(p.x)}-${Math.round(p.y)}`;
@@ -253,28 +259,18 @@
                 coordMap[key].totalDur += p.dur;
                 coordMap[key].count += 1;
             });
-
             Object.values(coordMap).forEach(p => {
                 const avgDur = p.totalDur / p.count;
                 const mapId = getMapIdByName(p.map);
                 const container = document.getElementById(`map-container-${mapId}`);
-        
                 if (container) {
                     const dot = document.createElement('div');
                     dot.className = 'heat-point';
                     dot.style.left = `${p.x}%`;
                     dot.style.top = `${p.y}%`;
-            
-                    // --- 縮小圓圈計算邏輯 ---
-                    // 基礎 8px，每秒增加 0.5px，最高不超過 30px (原本是 50px)
-                    const size = Math.min(30, 5 + (avgDur * 0.1)); 
-            
+                    const size = Math.min(30, 8 + (avgDur * 0.1)); 
                     dot.style.width = size + 'px';
                     dot.style.height = size + 'px';
-            
-                    // 增加一些透明度讓重疊處更清晰
-                    dot.style.background = "rgba(79, 70, 229, 0.4)"; 
-            
                     container.appendChild(dot);
                 }
             });
@@ -290,15 +286,12 @@
         function updatePieChart(id, dataMap) {
             if (charts[id]) charts[id].destroy();
             charts[id] = new Chart(document.getElementById(id), {
-                type: 'doughnut', // 使用環形圖在手機上更美觀
+                type: 'doughnut',
                 data: {
                     labels: Object.keys(dataMap),
                     datasets: [{ data: Object.values(dataMap), backgroundColor: ['#4f46e5', '#818cf8', '#c7d2fe', '#312e81', '#e0e7ff'], borderWeight: 0 }]
                 },
-                options: { 
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } 
-                }
+                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
             });
         }
 
@@ -310,20 +303,13 @@
                     labels: Object.keys(dataMap),
                     datasets: [{ label: '次數', data: Object.values(dataMap), backgroundColor: '#818cf8', borderRadius: 4 }]
                 },
-                options: { 
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    plugins: { legend: { display: false } },
-                    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } }
-                }
+                options: { maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }
             });
         }
 
         function exportToExcel() {
             let csv = "\ufeff個案編號,成員組合,行為項目,位置名稱,館區,時間\n";
-            currentFilteredData.forEach(d => {
-                csv += `${d.id},${d.group},${d.action},${d.locName},${d.map},${new Date(d.time).toLocaleString()}\n`;
-            });
+            currentFilteredData.forEach(d => { csv += `${d.id},${d.group},${d.action},${d.locName},${d.map},${new Date(d.time).toLocaleString()}\n`; });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
@@ -331,7 +317,8 @@
             link.click();
         }
 
-        window.onload = () => filterData('all');
+        // 💡 初始值改為 'day'
+        window.onload = () => filterData('day');
     </script>
 </body>
 </html>
